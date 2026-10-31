@@ -1,0 +1,101 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>PLAYGROUND: 11:11 — Chapter 1 Vertical Slice</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#050608;color:#eee;font-family:Arial,sans-serif}
+canvas{display:block;width:100%;height:100%;background:linear-gradient(#0b1018,#11130f)}
+#hud{position:fixed;inset:0;pointer-events:none}
+#objective{position:absolute;left:20px;top:18px;padding:12px 16px;background:#080b0dcc;border:1px solid #ffffff22;border-radius:8px;max-width:360px}
+#clock{position:absolute;right:20px;top:18px;font-size:24px;letter-spacing:3px;background:#080b0dcc;padding:10px 14px;border-radius:8px}
+#prompt{position:absolute;left:50%;bottom:18%;transform:translateX(-50%);padding:10px 16px;background:#080b0ddd;border-radius:8px}
+#event{position:absolute;inset:0;display:none;align-items:center;justify-content:center;text-align:center;background:#000b;font-size:30px;letter-spacing:2px}
+#cross{position:absolute;left:50%;top:50%;width:12px;height:12px;transform:translate(-50%,-50%)}
+#cross:before,#cross:after{content:"";position:absolute;background:#fff}
+#cross:before{width:12px;height:1px;top:5px}.#cross:after{height:12px;width:1px;left:5px}
+#touch{position:absolute;bottom:18px;left:18px;display:grid;grid-template-columns:55px 55px 55px;gap:7px;pointer-events:auto}
+#touch button{height:55px;border:1px solid #ffffff44;background:#111b;color:#fff;border-radius:12px;font-size:18px}
+#touch .up{grid-column:2}.down{grid-column:2}.left{grid-column:1}.right{grid-column:3}
+#interact{position:absolute;right:18px;bottom:30px;width:90px;height:90px;border-radius:50%;border:1px solid #ffffff55;background:#111b;color:#fff;font-size:16px;pointer-events:auto}
+@media(min-width:900px){#touch,#interact{opacity:.25}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <div id="objective"><b>CHAPTER 1 — THE PLAYGROUND</b><br><span id="obj">Find the security booth.</span></div>
+  <div id="clock">10:47</div>
+  <div id="cross"></div>
+  <div id="prompt"></div>
+  <div id="event"></div>
+  <div id="touch">
+    <button class="up" data-k="w">▲</button><button class="left" data-k="a">◀</button>
+    <button class="down" data-k="s">▼</button><button class="right" data-k="d">▶</button>
+  </div>
+  <button id="interact">INTERACT</button>
+</div>
+<script>
+const c=document.getElementById('game'),ctx=c.getContext('2d');
+let W=innerWidth,H=innerHeight;function resize(){W=c.width=innerWidth;H=c.height=innerHeight}addEventListener('resize',resize);resize();
+const keys={}; addEventListener('keydown',e=>keys[e.key.toLowerCase()]=true); addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+document.querySelectorAll('#touch button').forEach(b=>{b.onpointerdown=()=>keys[b.dataset.k]=true;b.onpointerup=b.onpointercancel=()=>keys[b.dataset.k]=false});
+let px=0,py=0,angle=0,step=0,interact=false,phase=0,found={key:false,fuel:false,fuse:false,power:false,cctv:false,symbols:0};
+const objs=[
+ {x:4,y:3,r:.7,n:'Security Booth',t:'Find the security booth.',a:()=>{phase=Math.max(phase,1)}},
+ {x:9,y:2,r:.6,n:'Security Key',t:'Take the security key.',a:()=>{found.key=true;phase=2}},
+ {x:12,y:-4,r:.7,n:'Fuel Can',t:'Collect fuel for the generator.',a:()=>{found.fuel=true;phase=3}},
+ {x:-8,y:-3,r:.7,n:'Fuse',t:'Find the generator fuse.',a:()=>{found.fuse=true;phase=4}},
+ {x:0,y:-8,r:.9,n:'Generator',t:'Restore the generator.',a:()=>{if(found.fuel&&found.fuse){found.power=true;phase=5}}},
+ {x:5,y:4,r:.8,n:'CCTV',t:'Repair and inspect CCTV.',a:()=>{if(found.power){found.cctv=true;phase=6}}},
+ {x:-4,y:5,r:.6,n:'Symbol A',t:'Find the four symbols.',a:()=>{found.symbols=Math.max(found.symbols,1)}},
+ {x:-7,y:5,r:.6,n:'Symbol B',t:'Find the four symbols.',a:()=>{found.symbols=Math.max(found.symbols,2)}},
+ {x:-7,y:8,r:.6,n:'Symbol C',t:'Find the four symbols.',a:()=>{found.symbols=Math.max(found.symbols,3)}},
+ {x:-4,y:8,r:.6,n:'Symbol D',t:'Open the security drawer.',a:()=>{found.symbols=Math.max(found.symbols,4);phase=7}},
+ {x:0,y:11,r:.8,n:'Main Gate',t:'Reach the main gate.',a:()=>{if(phase>=7)trigger()}}
+];
+function nearest(){let best=null,bd=99;for(const o of objs){let d=Math.hypot(o.x-px,o.y-py);if(d<o.r+1.2&&d<bd){best=o;bd=d}}return best}
+function trigger(){if(phase<8){phase=8;document.getElementById('obj').textContent='SURVIVE THE 11:11 EVENT';setTimeout(event11,1200)}}
+function event11(){
+document.getElementById('event').style.display='flex';
+document.getElementById('event').innerHTML='<div>11:11<br><small>Everyone sees something different.</small></div>';
+document.getElementById('clock').textContent='11:11';
+setTimeout(()=>{document.getElementById('event').innerHTML='<div>YOU WERE HERE BEFORE.</div>'},2200);
+setTimeout(()=>{document.getElementById('event').style.display='none';document.getElementById('obj').textContent='CHAPTER 1 COMPLETE — THE GATE IS OPEN.'},4200)
+}
+document.getElementById('interact').onclick=()=>doInteract();
+addEventListener('keydown',e=>{if(e.key.toLowerCase()==='e')doInteract()});
+function doInteract(){let o=nearest();if(o)o.a()}
+function update(){
+let s=.085;if(keys.shift)s*=1.5;
+if(keys.w)py+=Math.cos(angle)*s,px+=Math.sin(angle)*s;
+if(keys.s)py-=Math.cos(angle)*s,px-=Math.sin(angle)*s;
+if(keys.a)px-=Math.cos(angle)*s,py+=Math.sin(angle)*s;
+if(keys.d)px+=Math.cos(angle)*s,py-=Math.sin(angle)*s;
+if(keys.ArrowLeft)angle-=.035;if(keys.ArrowRight)angle+=.035;
+if(phase<8){
+ let o=nearest();document.getElementById('prompt').textContent=o?'E / INTERACT: '+o.n:'';
+ let text=phase===0?'Find the security booth.':phase===1?'Find the security key.':phase===2?'Collect fuel.':phase===3?'Find the fuse.':phase===4?'Restore the generator.':phase===5?'Repair the CCTV.':phase===6?'Find all four symbols.':phase===7?'Reach the main gate.':'';
+ document.getElementById('obj').textContent=text;
+ if(phase>=5)document.getElementById('clock').textContent='10:48';
+}
+}
+function draw(){
+ctx.fillStyle='#07090c';ctx.fillRect(0,0,W,H);
+ctx.save();ctx.translate(W/2,H/2);
+const scale=Math.min(W,H)/28;
+ctx.strokeStyle='#151b16';ctx.lineWidth=scale*.08;
+for(let x=-14;x<=14;x+=1)for(let y=-10;y<=12;y+=1){ctx.strokeRect(x*scale,y*scale,scale,scale)}
+// zones
+function zone(x,y,w,h,label){ctx.fillStyle='#111813';ctx.fillRect(x*scale,y*scale,w*scale,h*scale);ctx.fillStyle='#b6b8aa';ctx.font=scale*.38+'px Arial';ctx.fillText(label,x*scale+8,y*scale+scale*.55)}
+zone(2,1,5,4,'SECURITY');zone(-10,-5,5,4,'COURT');zone(8,-6,5,4,'SHED');zone(-2,-10,5,3,'CLASSROOM');
+ctx.fillStyle='#0e1510';ctx.fillRect(-4*scale,2*scale,8*scale,7*scale);
+// objects
+for(const o of objs){let x=(o.x-px)*scale,y=(o.y-py)*scale;ctx.fillStyle=o.n==='Main Gate'?'#c9c9c9':'#8b7561';ctx.beginPath();ctx.arc(x,y,Math.max(5,o.r*scale*.45),0,7);ctx.fill()}
+ctx.fillStyle='#d9d9d9';ctx.beginPath();ctx.arc(0,0,7,0,7);ctx.fill();
+ctx.restore();
+}
+function loop(){update();draw();requestAnimationFrame(loop)}loop();
+</script>
+</body></html>
